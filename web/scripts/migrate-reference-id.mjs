@@ -1,5 +1,3 @@
-// One-shot migration: source_job_id → reference_id, drop unique + NOT NULL,
-// drop template column.
 // Run with: node --env-file=.env.local scripts/migrate-reference-id.mjs
 import { neon } from '@neondatabase/serverless';
 

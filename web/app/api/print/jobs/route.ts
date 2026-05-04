@@ -1,7 +1,5 @@
-import { db } from '@/lib/db';
-import { printers, printJobs } from '@/lib/db/schema';
+import { enqueueMarkupJob } from '@/lib/queue/enqueue';
 import { uuidSchema } from '@/lib/validation';
-import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 export const runtime = 'nodejs';
@@ -26,28 +24,21 @@ export async function POST(req: Request) {
   }
   const { printerId, referenceId, markup } = parsed.data;
 
-  const printer = await db.query.printers.findFirst({
-    where: and(eq(printers.id, printerId), eq(printers.isActive, true)),
+  const result = await enqueueMarkupJob({
+    printerId,
+    referenceId: referenceId ?? null,
+    markup,
   });
-  if (!printer) {
+  if (!result.ok) {
     return Response.json(
       { error: `Printer ${printerId} not found or inactive` },
       { status: 400 },
     );
   }
 
-  const [job] = await db
-    .insert(printJobs)
-    .values({
-      printerId,
-      referenceId: referenceId ?? null,
-      payload: { markup },
-    })
-    .returning({ id: printJobs.id });
-
   return Response.json({
     ok: true,
-    jobId: job.id,
+    jobId: result.id,
     referenceId: referenceId ?? null,
   });
 }
