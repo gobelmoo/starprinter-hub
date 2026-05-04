@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.*
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files (never commit secrets)
+.env
+.env.local
+.env*.local
+.env.production
+.env.development
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Vercel
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / agents
+.vscode/
+.idea/
+*.swp
+*.swo
+.claude/
+
+# Star Micronics PHP sample DB (reference folder)
+**/simplequeue.sqlite-journal
+
+# cputil per-platform binaries — only commit linux-x64 (used by Vercel).
+# Mac/Windows are dev-local only; build with scripts/build-cputil.sh
+cputil-darwin-*
+cputil-windows-*
+cputil-osx-*
