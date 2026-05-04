@@ -36,6 +36,7 @@ export default async function EditPrinterPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Edit printer</h1>
+          <p className="mt-1 font-mono text-xs text-gray-500">{printer.id}</p>
           <p className="mt-1 text-sm text-gray-500">
             Last seen {formatTime(printer.lastSeenAt)} • Last status:{' '}
             {printer.lastStatusCode ?? '-'}

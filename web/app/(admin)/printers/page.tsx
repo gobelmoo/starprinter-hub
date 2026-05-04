@@ -47,6 +47,7 @@ export default async function PrintersPage({
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
+              <th className="px-4 py-2 text-left">ID</th>
               <th className="px-4 py-2 text-left">Name</th>
               <th className="px-4 py-2 text-left">Branch</th>
               <th className="px-4 py-2 text-left">MAC</th>
@@ -58,7 +59,7 @@ export default async function PrintersPage({
           <tbody className="divide-y divide-gray-100">
             {list.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                   No printers yet. Click <strong>Add printer</strong> to get
                   started.
                 </td>
@@ -66,6 +67,12 @@ export default async function PrintersPage({
             ) : (
               list.map((p) => (
                 <tr key={p.id}>
+                  <td
+                    className="px-4 py-3 font-mono text-xs text-gray-500"
+                    title={p.id}
+                  >
+                    {p.id.slice(0, 8)}
+                  </td>
                   <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="px-4 py-3 text-gray-600">
                     {p.branchCode ?? '-'}
