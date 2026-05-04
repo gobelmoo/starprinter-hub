@@ -18,7 +18,7 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
-KEEP_KEYS="STARPRINTER_DB_URL ADMIN_PASSWORD ADMIN_COOKIE_SECRET ZOHO_API_KEY CRON_SECRET"
+KEEP_KEYS="STARPRINTER_DB_URL ADMIN_PASSWORD ADMIN_COOKIE_SECRET PRINT_API_KEY CRON_SECRET"
 
 # 1) List existing env vars; collect IDs of any KEEP_KEYS to delete first.
 echo "Fetching existing env vars..."

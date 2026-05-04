@@ -8,12 +8,12 @@ export const runtime = 'nodejs';
 
 const RequestSchema = z.object({
   printerId: uuidSchema,
-  jobId: z.string().min(1),
+  referenceId: z.string().min(1).optional(),
   markup: z.string().min(1),
 });
 
 export async function POST(req: Request) {
-  if (req.headers.get('x-api-key') !== process.env.ZOHO_API_KEY) {
+  if (req.headers.get('x-api-key') !== process.env.PRINT_API_KEY) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { printerId, jobId, markup } = parsed.data;
+  const { printerId, referenceId, markup } = parsed.data;
 
   const printer = await db.query.printers.findFirst({
     where: and(eq(printers.id, printerId), eq(printers.isActive, true)),
@@ -36,25 +36,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const inserted = await db
+  const [job] = await db
     .insert(printJobs)
     .values({
       printerId,
-      sourceJobId: jobId,
-      template: 'markup',
+      referenceId: referenceId ?? null,
       payload: { markup },
     })
-    .onConflictDoNothing()
     .returning({ id: printJobs.id });
-
-  if (inserted.length === 0) {
-    return Response.json({ ok: true, status: 'duplicate', jobId });
-  }
 
   return Response.json({
     ok: true,
-    status: 'queued',
-    id: inserted[0].id,
-    jobId,
+    jobId: job.id,
+    referenceId: referenceId ?? null,
   });
 }

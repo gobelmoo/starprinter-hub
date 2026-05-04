@@ -98,18 +98,18 @@ UPDATE printers SET is_active = false WHERE mac_address = '00:11:62:...';
 
 ## 4. การจัดการ Secret
 
-### Rotate ZOHO_API_KEY (เปลี่ยนรหัสที่ Zoho ใช้ยิง webhook)
+### Rotate PRINT_API_KEY (รหัสที่ integrator ส่งใน `x-api-key` header)
 
 ```bash
 cd web
 NEW_KEY=$(openssl rand -hex 32)
 
 # Update local
-sed -i.bak "s|^ZOHO_API_KEY=.*|ZOHO_API_KEY=$NEW_KEY|" .env.local && rm .env.local.bak
+sed -i.bak "s|^PRINT_API_KEY=.*|PRINT_API_KEY=$NEW_KEY|" .env.local && rm .env.local.bak
 
 # Update Vercel
-vercel env rm ZOHO_API_KEY production --yes
-echo "$NEW_KEY" | vercel env add ZOHO_API_KEY production
+vercel env rm PRINT_API_KEY production --yes
+echo "$NEW_KEY" | vercel env add PRINT_API_KEY production
 
 # Re-deploy เพื่อให้ env ใหม่ active
 vercel --prod
@@ -188,7 +188,7 @@ SELECT name, mac_address, last_seen_at, last_status_code FROM printers;
 | Order มี status `failed` พร้อม "printer code: 410" | กระดาษหมด | เปลี่ยนกระดาษ + Retry |
 | Status ค้าง `printing` นาน | DELETE จาก printer หาย / printer ค้าง | รอ cron expire-stuck (10 นาที) จะ mark failed อัตโนมัติ หรือ manual mark-done ในหน้า job |
 | Login ไม่ผ่านทั้งที่ password ถูก | `ADMIN_COOKIE_SECRET` ใน production env ว่าง | ตรวจ Vercel env vars + re-deploy |
-| Zoho ยิงมาได้ 401 | `x-api-key` ไม่ตรงกับ ZOHO_API_KEY ใน Vercel | ดู section "Rotate ZOHO_API_KEY" |
+| Zoho ยิงมาได้ 401 | `x-api-key` ไม่ตรงกับ PRINT_API_KEY ใน Vercel | ดู section "Rotate PRINT_API_KEY" |
 | Cron ไม่ทำงาน (job ค้างนาน) | `CRON_SECRET` ไม่ตรง / vercel.json ไม่ถูก deploy | ตรวจ Vercel Dashboard → Functions → Crons + log |
 
 ---

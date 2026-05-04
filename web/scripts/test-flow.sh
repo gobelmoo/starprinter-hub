@@ -1,8 +1,6 @@
 #!/bin/bash
 # End-to-end flow test against the running server.
 # Default BASE = local dev. Set BASE/PRINTER_ID/MAC to test other targets.
-#
-# Prerequisite: at least one active printer in the DB.
 
 set -e
 
@@ -14,13 +12,12 @@ if [ ! -f .env.local ]; then
   exit 1
 fi
 
-ZOHO_KEY=$(grep '^ZOHO_API_KEY=' .env.local | cut -d= -f2-)
-if [ -z "$ZOHO_KEY" ]; then
-  echo "Error: ZOHO_API_KEY not found in .env.local"
+API_KEY=$(grep '^PRINT_API_KEY=' .env.local | cut -d= -f2-)
+if [ -z "$API_KEY" ]; then
+  echo "Error: PRINT_API_KEY not found in .env.local"
   exit 1
 fi
 
-# Look up first active printer with the given MAC if PRINTER_ID not set
 PRINTER_ID="${PRINTER_ID:-}"
 if [ -z "$PRINTER_ID" ]; then
   PG_URL=$(grep '^STARPRINTER_DB_URL=' .env.local | cut -d= -f2-)
@@ -39,42 +36,42 @@ fi
 echo "Using printerId: $PRINTER_ID"
 echo "Using mac:       $MAC"
 
-JOB_ID="TEST-$(date +%s)"
+REF_ID="TEST-$(date +%s)"
 hr() { echo; echo "─── $1 ───"; }
 
-hr "1. Submit markup job ($JOB_ID)"
+hr "1. Submit markup job (referenceId=$REF_ID)"
 curl -s -X POST "$BASE/api/print/jobs" \
-  -H "x-api-key: $ZOHO_KEY" \
+  -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
     \"printerId\": \"$PRINTER_ID\",
-    \"jobId\": \"$JOB_ID\",
+    \"referenceId\": \"$REF_ID\",
     \"markup\": \"[align: centre][mag: w 2; h 2]ทดสอบ[mag]\\n[align: left]\\nรายการ 1   100.00\\n[cut]\"
   }"
 echo
 
-hr "2. Printer polls"
+hr "2. Re-submit same referenceId (each call = new job, no dedup)"
+curl -s -X POST "$BASE/api/print/jobs" \
+  -H "x-api-key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"printerId\": \"$PRINTER_ID\",
+    \"referenceId\": \"$REF_ID\",
+    \"markup\": \"[align: centre]Re-print same reference\\n[cut]\"
+  }"
+echo
+
+hr "3. Printer polls"
 curl -s -X POST "$BASE/api/cloudprnt" \
   -H "Content-Type: application/json" \
   -d "{\"printerMAC\":\"$MAC\",\"statusCode\":\"200%20OK\"}"
 echo
 
-hr "3. Printer fetches StarPRNT bytes (via cputil)"
+hr "4. Printer fetches StarPRNT bytes (via cputil)"
 curl -s "$BASE/api/cloudprnt?mac=$MAC" | xxd | head -3
 
-hr "4. Printer ACKs"
+hr "5. Printer ACKs"
 curl -s -X DELETE -o /dev/null -w "HTTP %{http_code}\n" \
   "$BASE/api/cloudprnt?mac=$MAC&code=200"
-
-hr "5. Re-submit same jobId (idempotency)"
-curl -s -X POST "$BASE/api/print/jobs" \
-  -H "x-api-key: $ZOHO_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"printerId\": \"$PRINTER_ID\",
-    \"jobId\": \"$JOB_ID\",
-    \"markup\": \"[align: left]different content\\n[cut]\"
-  }"
-echo
 
 hr "Done"

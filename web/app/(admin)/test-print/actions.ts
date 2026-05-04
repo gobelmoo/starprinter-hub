@@ -26,26 +26,16 @@ export async function sendTestPrint(fd: FormData) {
     errorRedirect('/test-print', 'Markup is empty');
   }
 
-  const jobId =
-    String(fd.get('jobId') ?? '').trim() || `TEST-${Date.now()}`;
+  const referenceId = String(fd.get('referenceId') ?? '').trim() || null;
 
   const [job] = await db
     .insert(printJobs)
     .values({
       printerId: printer.id,
-      sourceJobId: jobId,
-      template: 'markup',
+      referenceId,
       payload: { markup },
     })
-    .onConflictDoNothing()
     .returning({ id: printJobs.id });
-
-  if (!job) {
-    errorRedirect(
-      '/test-print',
-      `Job ID "${jobId}" already used. Pick a different one or leave blank.`,
-    );
-  }
 
   redirect(`/jobs/${job.id}`);
 }

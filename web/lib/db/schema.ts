@@ -26,8 +26,7 @@ export const printJobs = pgTable(
     printerId: uuid('printer_id')
       .notNull()
       .references(() => printers.id),
-    sourceJobId: text('source_job_id').notNull().unique(),
-    template: text('template').notNull().default('order'),
+    referenceId: text('reference_id'),
     payload: jsonb('payload').notNull(),
     status: text('status').notNull().default('pending'),
     errorMessage: text('error_message'),

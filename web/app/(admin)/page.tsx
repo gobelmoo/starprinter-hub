@@ -14,7 +14,7 @@ export default async function DashboardPage() {
     db
       .select({
         id: printJobs.id,
-        sourceJobId: printJobs.sourceJobId,
+        referenceId: printJobs.referenceId,
         status: printJobs.status,
         createdAt: printJobs.createdAt,
         printerName: printers.name,
@@ -95,7 +95,7 @@ export default async function DashboardPage() {
             <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-4 py-2 text-left">Time</th>
-                <th className="px-4 py-2 text-left">Order</th>
+                <th className="px-4 py-2 text-left">Reference</th>
                 <th className="px-4 py-2 text-left">Branch</th>
                 <th className="px-4 py-2 text-left">Printer</th>
                 <th className="px-4 py-2 text-left">Status</th>
@@ -116,7 +116,9 @@ export default async function DashboardPage() {
                       {formatTime(j.createdAt)}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">
-                      {j.sourceJobId}
+                      {j.referenceId ?? (
+                        <span className="text-gray-300">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {j.branchCode ?? '-'}

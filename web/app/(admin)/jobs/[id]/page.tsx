@@ -41,9 +41,12 @@ export default async function JobDetailPage({
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-mono text-2xl font-semibold">
-            {job.sourceJobId}
-          </h1>
+          <h1 className="font-mono text-2xl font-semibold">{job.id}</h1>
+          {job.referenceId && (
+            <p className="mt-1 text-sm text-gray-500">
+              Reference: <span className="font-mono">{job.referenceId}</span>
+            </p>
+          )}
           <div className="mt-2 flex items-center gap-3 text-sm text-gray-500">
             <StatusBadge status={job.status} />
             <span>Created {formatTime(job.createdAt)}</span>
@@ -83,10 +86,6 @@ export default async function JobDetailPage({
         <div>
           <dt className="text-xs uppercase text-gray-500">Branch</dt>
           <dd className="mt-1">{printer?.branchCode ?? '-'}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase text-gray-500">Template</dt>
-          <dd className="mt-1 font-mono text-xs">{job.template}</dd>
         </div>
         <div>
           <dt className="text-xs uppercase text-gray-500">Printed at</dt>
