@@ -6,6 +6,85 @@ const RESPONSE_EXAMPLE = `{
   "referenceId": "ORD-20260505-001"
 }`;
 
+// Array-composition example — build markup line-by-line from data, join with \n.
+// Useful when looping over order items or other dynamic content.
+const ARRAY_COMPOSE_JS = `// JavaScript / TypeScript / Node / n8n / Make
+const items = [
+  { name: "ผัดไทย",  qty: 2, price: 240.00 },
+  { name: "ต้มยำ",   qty: 1, price:  80.00 },
+];
+const total = items.reduce((s, i) => s + i.price, 0);
+
+const lines = [
+  "[align: centre][mag: w 2; h 2]ใบเสร็จ[mag]",
+  "",
+  "[align: left]",
+  ...items.map(i =>
+    \`[column: left: \${i.name} ×\${i.qty}; right: \${i.price.toFixed(2)}]\`
+  ),
+  "",
+  \`[align: right][bold]TOTAL \${total.toFixed(2)}[/bold]\`,
+  "[feed: lines 2]",
+  "[cut]",
+];
+
+const markup = lines.join("\\n");   // <-- join เป็น string เดียวก่อนส่ง
+
+await fetch("${PUBLIC_BASE_URL}/api/print/jobs", {
+  method: "POST",
+  headers: {
+    "x-api-key": "${API_KEY_PLACEHOLDER}",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    printerId: "<printer-uuid>",
+    referenceId: "ORD-20260505-001",
+    markup,
+  }),
+});`;
+
+const ARRAY_COMPOSE_DELUGE = `// Zoho Deluge
+items = List();
+items.add({"name": "ผัดไทย", "qty": 2, "price": 240.00});
+items.add({"name": "ต้มยำ",  "qty": 1, "price":  80.00});
+
+total = 0.0;
+lines = List();
+lines.add("[align: centre][mag: w 2; h 2]ใบเสร็จ[mag]");
+lines.add("");
+lines.add("[align: left]");
+for each item in items
+{
+    line = "[column: left: " + item.get("name") + " ×" + item.get("qty")
+         + "; right: " + item.get("price").toString("0.00") + "]";
+    lines.add(line);
+    total = total + item.get("price");
+}
+lines.add("");
+lines.add("[align: right][bold]TOTAL " + total.toString("0.00") + "[/bold]");
+lines.add("[feed: lines 2]");
+lines.add("[cut]");
+
+markup = lines.toString("\\n");   // <-- join List เป็น string เดียว
+
+body_map = Map();
+body_map.put("printerId", "<printer-uuid>");
+body_map.put("referenceId", "ORD-20260505-001");
+body_map.put("markup", markup);
+
+header_map = Map();
+header_map.put("x-api-key", "${API_KEY_PLACEHOLDER}");
+header_map.put("Content-Type", "application/json");
+
+response = invokeurl
+[
+    url     : "${PUBLIC_BASE_URL}/api/print/jobs"
+    type    : POST
+    headers : header_map
+    parameters   : body_map.toString()
+    content-type : "application/json"
+];`;
+
 export function ApiSpec({ printerId }: { printerId: string }) {
   const sampleBody = JSON.stringify(
     {
@@ -85,6 +164,38 @@ export function ApiSpec({ printerId }: { printerId: string }) {
           </pre>
         </dd>
       </dl>
+
+      <div className="mt-6 border-t border-gray-200 pt-5">
+        <h3 className="text-sm font-semibold text-gray-700">
+          ประกอบ markup จาก array
+        </h3>
+        <p className="mt-1 text-xs text-gray-500">
+          ถ้าเนื้อหาใบเสร็จมาจาก list (รายการอาหาร, ผู้โดยสาร, ฯลฯ) ให้สร้างเป็น
+          array ของบรรทัดก่อน แล้ว <code className="rounded bg-gray-100 px-1">join</code>{' '}
+          ด้วย <code className="rounded bg-gray-100 px-1">\n</code> ก่อนส่ง — field{' '}
+          <code className="rounded bg-gray-100 px-1">markup</code> ของ API
+          ต้องเป็น string เดียวเสมอ
+        </p>
+
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <div>
+            <div className="mb-1 text-xs font-medium text-gray-600">
+              JavaScript / TypeScript
+            </div>
+            <pre className="overflow-x-auto rounded bg-gray-50 p-3 font-mono text-xs leading-5">
+{ARRAY_COMPOSE_JS}
+            </pre>
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-medium text-gray-600">
+              Zoho Deluge
+            </div>
+            <pre className="overflow-x-auto rounded bg-gray-50 p-3 font-mono text-xs leading-5">
+{ARRAY_COMPOSE_DELUGE}
+            </pre>
+          </div>
+        </div>
+      </div>
 
       <p className="mt-4 text-xs text-gray-500">
         เอกสารฉบับเต็ม: ดู{' '}
