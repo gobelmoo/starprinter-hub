@@ -4,6 +4,7 @@ import { printers } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
 import { timeAgo } from '@/lib/format';
 import { MAX_PRINTERS } from '@/lib/constants';
+import { paperWidthLabel } from '@/lib/printer-config';
 import { OnlinePill } from '@/components/online-pill';
 import { deletePrinter } from './actions';
 
@@ -51,6 +52,7 @@ export default async function PrintersPage({
               <th className="px-4 py-2 text-left">Name</th>
               <th className="px-4 py-2 text-left">Branch</th>
               <th className="px-4 py-2 text-left">MAC</th>
+              <th className="px-4 py-2 text-left">Width</th>
               <th className="px-4 py-2 text-left">Active</th>
               <th className="px-4 py-2 text-left">Last seen</th>
               <th className="px-4 py-2 text-right"></th>
@@ -59,7 +61,7 @@ export default async function PrintersPage({
           <tbody className="divide-y divide-gray-100">
             {list.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   No printers yet. Click <strong>Add printer</strong> to get
                   started.
                 </td>
@@ -79,6 +81,9 @@ export default async function PrintersPage({
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">
                     {p.macAddress}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {paperWidthLabel(p.paperWidth)}
                   </td>
                   <td className="px-4 py-3">
                     <OnlinePill

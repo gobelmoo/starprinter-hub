@@ -2,8 +2,7 @@ import { spawn } from 'node:child_process';
 import { writeFile, readFile, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-
-export type ThermalWidth = 'thermal2' | 'thermal3' | 'thermal4';
+import type { ThermalWidth } from './printer-config';
 
 const PLATFORM = process.platform;
 const ARCH = process.arch;

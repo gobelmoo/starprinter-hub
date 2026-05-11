@@ -6,6 +6,7 @@ import { count, eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { MAX_PRINTERS } from '@/lib/constants';
+import { THERMAL_WIDTHS } from '@/lib/printer-config';
 import { errorRedirect, isUniqueViolation } from '@/lib/server-actions';
 import { uuidSchema } from '@/lib/validation';
 
@@ -24,6 +25,7 @@ const PrinterInputSchema = z.object({
     .trim()
     .optional()
     .transform((v) => (v ? v : undefined)),
+  paperWidth: z.enum(THERMAL_WIDTHS),
   isActive: z.boolean(),
 });
 
@@ -32,6 +34,7 @@ function parseForm(fd: FormData) {
     name: fd.get('name'),
     macAddress: fd.get('macAddress'),
     branchCode: fd.get('branchCode'),
+    paperWidth: fd.get('paperWidth'),
     isActive: fd.get('isActive') === 'on',
   });
 }

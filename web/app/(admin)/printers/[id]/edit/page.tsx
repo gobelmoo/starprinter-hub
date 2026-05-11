@@ -60,6 +60,7 @@ export default async function EditPrinterPage({
             name: printer.name,
             macAddress: printer.macAddress,
             branchCode: printer.branchCode,
+            paperWidth: printer.paperWidth,
             isActive: printer.isActive,
           }}
           error={error}

@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import type { Printer } from '@/lib/db/schema';
+import { PAPER_WIDTH_OPTIONS } from '@/lib/printer-config';
 
 type Defaults = Partial<
-  Pick<Printer, 'id' | 'name' | 'macAddress' | 'branchCode' | 'isActive'>
+  Pick<
+    Printer,
+    'id' | 'name' | 'macAddress' | 'branchCode' | 'paperWidth' | 'isActive'
+  >
 >;
 
 type Props = {
@@ -55,6 +59,27 @@ export function PrinterForm({
         placeholder="BKK01"
         hint="Used for routing — Zoho's branchCode field must match"
       />
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Paper width
+          <span className="ml-0.5 text-red-500">*</span>
+        </label>
+        <select
+          name="paperWidth"
+          defaultValue={defaultValues?.paperWidth ?? 'thermal2'}
+          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+        >
+          {PAPER_WIDTH_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-gray-500">
+          ความกว้างกระดาษของเครื่องพิมพ์ — ต้องตรงกับรุ่นเครื่องจริง
+        </p>
+      </div>
 
       <label className="flex items-center gap-2 text-sm">
         <input

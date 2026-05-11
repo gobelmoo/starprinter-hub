@@ -13,6 +13,7 @@ export const printers = pgTable('printers', {
   macAddress: text('mac_address').notNull().unique(),
   name: text('name').notNull(),
   branchCode: text('branch_code'),
+  paperWidth: text('paper_width').notNull().default('thermal2'),
   isActive: boolean('is_active').notNull().default(true),
   lastSeenAt: timestamp('last_seen_at'),
   lastStatusCode: text('last_status_code'),

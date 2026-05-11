@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { printers, printJobs } from '@/lib/db/schema';
 import { renderMarkup } from '@/lib/cputil';
+import type { ThermalWidth } from '@/lib/printer-config';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
@@ -144,7 +145,7 @@ export async function GET(req: Request) {
 
   let bytes: Uint8Array;
   try {
-    bytes = await renderMarkup(markup);
+    bytes = await renderMarkup(markup, printer.paperWidth as ThermalWidth);
   } catch (err) {
     await db
       .update(printJobs)
