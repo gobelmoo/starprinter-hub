@@ -8,10 +8,10 @@
 
 | Layer | บริการที่ใช้ | URL/หน้า |
 |---|---|---|
-| App (production) | Vercel (Next.js) | `https://starprinter-hub.vercel.app` |
-| DB | Neon Postgres (project: `starprinter-hub`) | https://console.neon.tech |
+| App (production) | Vercel (Next.js) | `https://cloudprnt-rc2c.vercel.app` |
+| DB | Neon Postgres (customer-owned) | https://console.neon.tech |
 | Source | GitHub repo | `widelynext/starprinter-hub` |
-| Vercel project | `widelynexts-projects/starprinter-hub` | https://vercel.com/widelynexts-projects/starprinter-hub |
+| Vercel project | `rc2ccompany-6534s-projects/rc2c-cloud-printer` | https://vercel.com/rc2ccompany-6534s-projects/rc2c-cloud-printer |
 
 > **สำคัญ — ENV var:** ระบบใช้ `STARPRINTER_DB_URL` (ไม่ใช่ `POSTGRES_URL`) เพราะ Vercel marketplace storage integration เก่าใน team auto-inject `POSTGRES_URL` ตอน runtime ทับค่าที่เราตั้ง
 

@@ -4,7 +4,7 @@
 
 | รายการ | ค่า |
 |---|---|
-| URL ระบบ | https://starprinter-hub.vercel.app |
+| URL ระบบ | https://cloudprnt-rc2c.vercel.app |
 | Admin password | (เก็บใน password manager — ติดต่อ WidelyNext ถ้าลืม) |
 | API key สำหรับ integrator | (เก็บใน password manager — ดู Section 7) |
 
@@ -42,7 +42,7 @@
 
 ## 2. เข้าสู่ระบบ
 
-1. เปิด browser ไปที่ `https://starprinter-hub.vercel.app`
+1. เปิด browser ไปที่ `https://cloudprnt-rc2c.vercel.app`
 2. ระบบ redirect ไป `/login` อัตโนมัติ
 3. กรอก **Admin password** → กด **Sign in**
 4. เข้าสู่ Dashboard
@@ -125,7 +125,7 @@ login ด้วย
 | Field | Value |
 |---|---|
 | **CloudPRNT Service** | `ENABLE` |
-| **Server URL** | `https://starprinter-hub.vercel.app/api/cloudprnt` |
+| **Server URL** | `https://cloudprnt-rc2c.vercel.app/api/cloudprnt` |
 | **Polling time** | `5` วินาที (ใบเสร็จออกเร็ว ปกติพอ) |
 | **HTTP Response Timeout** | `60` (default) |
 | **User Name** | (เว้นว่าง) |
@@ -239,7 +239,7 @@ login ด้วย
 ### Endpoint
 
 ```
-POST https://starprinter-hub.vercel.app/api/print/jobs
+POST https://cloudprnt-rc2c.vercel.app/api/print/jobs
 ```
 
 Headers

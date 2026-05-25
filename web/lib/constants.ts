@@ -6,6 +6,6 @@ export const PUBLIC_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL ??
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'https://starprinter-hub.vercel.app');
+    : 'https://cloudprnt-rc2c.vercel.app');
 
 export const API_KEY_PLACEHOLDER = '<your-api-key>';

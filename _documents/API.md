@@ -8,7 +8,7 @@
 
 | Environment | URL |
 |---|---|
-| Production | `https://starprinter-hub.vercel.app` |
+| Production | `https://cloudprnt-rc2c.vercel.app` |
 | Local dev | `http://localhost:3000` |
 
 ---
@@ -155,7 +155,7 @@ Header `x-api-key` ตรงกับ secret ที่ WidelyNext แจ้ง�
 ใน Zoho Creator → Form/Workflow → Action: **Send HTTP Request**
 
 ```
-URL:     https://starprinter-hub.vercel.app/api/print/jobs
+URL:     https://cloudprnt-rc2c.vercel.app/api/print/jobs
 Method:  POST
 Type:    JSON
 

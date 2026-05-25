@@ -9,7 +9,7 @@
 ```php
 <?php
 
-$apiUrl = "https://starprinter-hub.vercel.app/api/print/jobs";
+$apiUrl = "https://cloudprnt-rc2c.vercel.app/api/print/jobs";
 $apiKey = "<your-api-key>"; // secret ที่ WidelyNext แจ้งให้
 
 $payload = [
@@ -57,7 +57,7 @@ if ($httpStatus === 200 && !empty($result["ok"])) {
 
 function sendPrintJob(string $printerId, string $markup, ?string $referenceId = null): array
 {
-    $apiUrl = "https://starprinter-hub.vercel.app/api/print/jobs";
+    $apiUrl = "https://cloudprnt-rc2c.vercel.app/api/print/jobs";
     $apiKey = getenv("PRINT_API_KEY") ?: "<your-api-key>";
 
     $payload = [
@@ -192,7 +192,7 @@ body_map.put("markup", "[align: centre]ใบเสร็จ\n[cut]");
 // invokeurl — สังเกต body_map.toString() และ content-type
 response = invokeurl
 [
-    url     : "https://starprinter-hub.vercel.app/api/print/jobs"
+    url     : "https://cloudprnt-rc2c.vercel.app/api/print/jobs"
     type    : POST
     headers : header_map
     parameters : body_map.toString()
