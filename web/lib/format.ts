@@ -22,10 +22,12 @@ export function timeAgo(d: Date | string | null): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+// 12 min threshold: last_seen_at is debounced server-side to once per 10 min
+// (see lib/cache/last-seen.ts) so a tighter window would flicker offline.
 export function isOnline(lastSeenAt: Date | string | null): boolean {
   if (!lastSeenAt) return false;
   const date =
     typeof lastSeenAt === 'string' ? new Date(lastSeenAt) : lastSeenAt;
   const seconds = (Date.now() - date.getTime()) / 1000;
-  return seconds < 60;
+  return seconds < 720;
 }

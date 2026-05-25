@@ -1,10 +1,15 @@
 import { db } from '@/lib/db';
 import { printJobs } from '@/lib/db/schema';
-import { and, eq, lt } from 'drizzle-orm';
+import { invalidatePrinterJobs } from '@/lib/cache/printer';
+import { and, inArray, lt } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
 
-// Vercel Cron attaches `Authorization: Bearer ${CRON_SECRET}` automatically.
+const RETENTION_DAYS = 15;
+
+// Stuck-job expiry is handled inline in app/api/cloudprnt/route.ts (GET) so
+// Hobby's once-per-day cron limit doesn't leave jobs wedged for ~24h. This
+// cron is now retention-only.
 export async function GET(req: Request) {
   if (
     req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`
@@ -12,19 +17,20 @@ export async function GET(req: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // Any job stuck 'printing' for >10 min (no DELETE arrived) → fail it.
-  const cutoff = new Date(Date.now() - 10 * 60 * 1000);
-
-  const expired = await db
-    .update(printJobs)
-    .set({
-      status: 'failed',
-      errorMessage: 'expired (no DELETE received within 10 minutes)',
-    })
+  // Status filter is critical: never drop a 'pending' job — a printer that
+  // was offline for 15+ days should still be able to recover its queue.
+  const retentionCutoff = new Date(
+    Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000,
+  );
+  const deleted = await db
+    .delete(printJobs)
     .where(
-      and(eq(printJobs.status, 'printing'), lt(printJobs.createdAt, cutoff)),
+      and(
+        inArray(printJobs.status, ['done', 'failed']),
+        lt(printJobs.createdAt, retentionCutoff),
+      ),
     )
     .returning({ id: printJobs.id });
 
-  return Response.json({ expired: expired.length });
+  return Response.json({ deleted: deleted.length });
 }

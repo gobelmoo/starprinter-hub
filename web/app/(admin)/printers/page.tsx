@@ -29,6 +29,11 @@ export default async function PrintersPage({
             <code className="rounded bg-gray-100 px-1">branchCode</code> from
             Zoho.
           </p>
+          <p className="mt-1 text-xs text-gray-400">
+            Tip: set each printer's CloudPRNT polling interval to{' '}
+            <strong>60s</strong> (printer web UI → CloudPRNT) — keeps Neon
+            compute under the free quota.
+          </p>
         </div>
         <Link
           href="/printers/new"

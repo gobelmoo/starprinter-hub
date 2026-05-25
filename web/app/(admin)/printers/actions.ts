@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db';
 import { printers, printJobs } from '@/lib/db/schema';
+import { invalidatePrinters } from '@/lib/cache/printer';
 import { count, eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -70,6 +71,7 @@ export async function createPrinter(fd: FormData) {
     errorRedirect('/printers/new', msg);
   }
 
+  invalidatePrinters();
   redirect('/printers');
 }
 
@@ -91,6 +93,7 @@ export async function updatePrinter(fd: FormData) {
     errorRedirect(`/printers/${id}/edit`, msg);
   }
 
+  invalidatePrinters();
   redirect('/printers');
 }
 
@@ -113,5 +116,6 @@ export async function deletePrinter(fd: FormData) {
   }
 
   await db.delete(printers).where(eq(printers.id, id));
+  invalidatePrinters();
   redirect('/printers');
 }

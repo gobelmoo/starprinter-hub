@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { printers, printJobs } from '@/lib/db/schema';
+import { invalidatePrinterJobs } from '@/lib/cache/printer';
 import { and, eq } from 'drizzle-orm';
 
 type Result =
@@ -28,5 +29,6 @@ export async function enqueueMarkupJob(input: {
     })
     .returning({ id: printJobs.id });
 
+  invalidatePrinterJobs();
   return { ok: true, id: job.id };
 }

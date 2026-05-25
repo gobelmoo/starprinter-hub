@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db';
 import { printJobs } from '@/lib/db/schema';
+import { invalidatePrinterJobs } from '@/lib/cache/printer';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -18,6 +19,7 @@ export async function retryJob(formData: FormData) {
     })
     .where(eq(printJobs.id, id));
 
+  invalidatePrinterJobs();
   revalidatePath(`/jobs/${id}`);
   revalidatePath('/');
 }
@@ -35,6 +37,7 @@ export async function markJobDone(formData: FormData) {
     })
     .where(eq(printJobs.id, id));
 
+  invalidatePrinterJobs();
   revalidatePath(`/jobs/${id}`);
   revalidatePath('/');
 }

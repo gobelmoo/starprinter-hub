@@ -1,19 +1,21 @@
 import { db } from '@/lib/db';
-import { printers, printJobs } from '@/lib/db/schema';
+import { printJobs } from '@/lib/db/schema';
 import { renderMarkup } from '@/lib/cputil';
 import type { ThermalWidth } from '@/lib/printer-config';
+import {
+  getPrinterByMacCached,
+  hasPendingJobCached,
+  invalidatePrinterJobs,
+} from '@/lib/cache/printer';
+import { maybeUpdateLastSeen } from '@/lib/cache/last-seen';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
 
-async function findPrinterByMac(mac: string) {
-  return db.query.printers.findFirst({
-    where: eq(printers.macAddress, mac),
-  });
-}
+const STUCK_AFTER_MS = 10 * 60 * 1000;
 
 async function ackJob(mac: string, code: string | null) {
-  const printer = await findPrinterByMac(mac);
+  const printer = await getPrinterByMacCached(mac);
   if (!printer) return new Response('not found', { status: 404 });
 
   // Code 520 = network timeout — leave job 'printing', let printer retry GET
@@ -35,10 +37,12 @@ async function ackJob(mac: string, code: string | null) {
       ),
     );
 
+  invalidatePrinterJobs();
   return new Response(null, { status: 204 });
 }
 
-// POST — printer poll
+// POST — printer poll. Hot path: hits Postgres only when (a) cache cold,
+// (b) last_seen_at debounce window elapsed, or (c) a job is actually waiting.
 export async function POST(req: Request) {
   let body: Record<string, unknown> = {};
   try {
@@ -50,36 +54,42 @@ export async function POST(req: Request) {
   const mac = String(body.printerMAC ?? '').toLowerCase();
   if (!mac) return Response.json({ jobReady: false });
 
-  const printer = await findPrinterByMac(mac);
+  const printer = await getPrinterByMacCached(mac);
   if (!printer || !printer.isActive) {
     return Response.json({ jobReady: false });
   }
 
-  // Update last-seen + status. Per spec, every poll carries statusCode.
-  await db
-    .update(printers)
-    .set({
-      lastSeenAt: new Date(),
-      lastStatusCode: body.statusCode
-        ? decodeURIComponent(String(body.statusCode))
-        : null,
-    })
-    .where(eq(printers.id, printer.id));
+  // Debounced — at most one UPDATE per 5 min per printer per warm instance.
+  await maybeUpdateLastSeen(
+    printer.id,
+    body.statusCode ? decodeURIComponent(String(body.statusCode)) : null,
+  );
 
-  // Peek at any in-flight job (pending = waiting; printing = stuck from prior cycle).
-  // No state mutation here — claim happens in GET.
+  // Cached check; usually false → skip Postgres entirely.
+  if (!(await hasPendingJobCached(printer.id))) {
+    return Response.json({ jobReady: false });
+  }
+
+  // Cache says there's a job — confirm + return jobToken. Cache may be stale
+  // after ack/expiry; if no row, refresh cache so future polls short-circuit.
   const job = await db.query.printJobs.findFirst({
     where: and(
       eq(printJobs.printerId, printer.id),
       inArray(printJobs.status, ['pending', 'printing']),
     ),
     orderBy: asc(printJobs.createdAt),
+    columns: { id: true },
   });
 
+  if (!job) {
+    invalidatePrinterJobs();
+    return Response.json({ jobReady: false });
+  }
+
   return Response.json({
-    jobReady: !!job,
-    mediaTypes: job ? ['application/vnd.star.starprntcore'] : undefined,
-    jobToken: job?.id,
+    jobReady: true,
+    mediaTypes: ['application/vnd.star.starprntcore'],
+    jobToken: job.id,
   });
 }
 
@@ -94,7 +104,7 @@ export async function GET(req: Request) {
     return ackJob(mac, url.searchParams.get('code'));
   }
 
-  const printer = await findPrinterByMac(mac);
+  const printer = await getPrinterByMacCached(mac);
   if (!printer) return new Response('not found', { status: 404 });
 
   // 1) Idempotent: if already-printing job exists for this printer, return it.
@@ -105,6 +115,24 @@ export async function GET(req: Request) {
     ),
     orderBy: asc(printJobs.createdAt),
   });
+
+  // Self-heal: if the existing 'printing' job has been stuck > 10 min, the
+  // printer never sent DELETE (network drop, power cycle). Mark it failed
+  // and fall through to claim the next pending. Replaces the per-10-min cron
+  // we can't run on Hobby. NOTE: uses createdAt as a proxy for claim time —
+  // long-queued jobs that JUST got claimed will be expired on the next poll;
+  // operator retry recovers them.
+  if (job && Date.now() - job.createdAt.getTime() > STUCK_AFTER_MS) {
+    await db
+      .update(printJobs)
+      .set({
+        status: 'failed',
+        errorMessage: 'expired (no DELETE received within 10 minutes)',
+      })
+      .where(eq(printJobs.id, job.id));
+    invalidatePrinterJobs();
+    job = undefined;
+  }
 
   // 2) Otherwise claim next pending (pending → printing).
   if (!job) {
@@ -140,6 +168,7 @@ export async function GET(req: Request) {
         errorMessage: 'payload.markup missing or not a string',
       })
       .where(eq(printJobs.id, job.id));
+    invalidatePrinterJobs();
     return new Response(null, { status: 500 });
   }
 
@@ -154,6 +183,7 @@ export async function GET(req: Request) {
         errorMessage: `cputil error: ${err instanceof Error ? err.message : String(err)}`,
       })
       .where(eq(printJobs.id, job.id));
+    invalidatePrinterJobs();
     return new Response(null, { status: 500 });
   }
 
