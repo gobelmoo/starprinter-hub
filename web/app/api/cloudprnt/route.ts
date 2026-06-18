@@ -23,19 +23,30 @@ async function ackJob(mac: string, code: string | null) {
 
   const success = code?.startsWith('2') ?? false;
 
-  await db
-    .update(printJobs)
-    .set({
-      status: success ? 'done' : 'failed',
-      errorMessage: success ? null : `printer code: ${code ?? 'unknown'}`,
-      printedAt: success ? new Date() : null,
-    })
-    .where(
-      and(
-        eq(printJobs.printerId, printer.id),
-        eq(printJobs.status, 'printing'),
-      ),
-    );
+  if (success) {
+    // delete-on-success: ไม่เก็บประวัติงานสำเร็จ (ลด Neon storage)
+    await db
+      .delete(printJobs)
+      .where(
+        and(
+          eq(printJobs.printerId, printer.id),
+          eq(printJobs.status, 'printing'),
+        ),
+      );
+  } else {
+    await db
+      .update(printJobs)
+      .set({
+        status: 'failed',
+        errorMessage: `printer code: ${code ?? 'unknown'}`,
+      })
+      .where(
+        and(
+          eq(printJobs.printerId, printer.id),
+          eq(printJobs.status, 'printing'),
+        ),
+      );
+  }
 
   invalidatePrinterJobs();
   return new Response(null, { status: 204 });

@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { printJobs } from '@/lib/db/schema';
 import { invalidatePrinterJobs } from '@/lib/cache/printer';
-import { and, inArray, lt } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
 
@@ -17,8 +17,8 @@ export async function GET(req: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // Status filter is critical: never drop a 'pending' job — a printer that
-  // was offline for 15+ days should still be able to recover its queue.
+  // Retention-only: ไม่มี row 'done' อีกแล้ว (delete-on-success) → กวาดเฉพาะ
+  // 'failed' เก่า. ห้ามแตะ 'pending' — printer offline 15+ วันต้องกู้คิวได้.
   const retentionCutoff = new Date(
     Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000,
   );
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     .delete(printJobs)
     .where(
       and(
-        inArray(printJobs.status, ['done', 'failed']),
+        eq(printJobs.status, 'failed'),
         lt(printJobs.createdAt, retentionCutoff),
       ),
     )
