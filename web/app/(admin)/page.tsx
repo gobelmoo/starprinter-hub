@@ -88,7 +88,7 @@ export default async function DashboardPage() {
 
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Recent Jobs (last 50)
+          Active & Failed Jobs (last 50)
         </h2>
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
           <table className="w-full text-sm">

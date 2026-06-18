@@ -3,6 +3,7 @@ import { unstable_cache, revalidateTag } from 'next/cache';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { printers, printJobs } from '@/lib/db/schema';
+import { HEARTBEAT_SEC } from '@/lib/constants';
 
 // Two coarse tags. Edits to ANY printer invalidate all printer caches,
 // and any job state change invalidates all hasJob caches. Cheap and
@@ -39,11 +40,17 @@ export function getPrinterByMacCached(mac: string) {
   return fetchPrinterByMac(mac);
 }
 
-// 5-min TTL acts as a safety net; enqueue/claim/ack call invalidatePrinterJobs()
-// for immediate freshness. When false, polls skip Postgres entirely so the
-// Neon compute can auto-suspend.
-const fetchHasPendingJob = unstable_cache(
-  async (printerId: string): Promise<boolean> => {
+export type PendingState = { pending: boolean; gen: number };
+
+// Single idle Postgres touch per heartbeat. Returns whether a job is waiting
+// PLUS a generation stamp that flips on every (re)compute. The poll handler
+// uses `gen` to decide when to write last_seen, so the read and the write
+// land in the SAME compute wake. enqueue/claim/ack call invalidatePrinterJobs
+// ({ expire: 0 }) so a real job busts this immediately — the long revalidate
+// is only a missed-invalidation safety net (job delayed at most HEARTBEAT_SEC
+// in that rare case).
+const fetchPendingState = unstable_cache(
+  async (printerId: string): Promise<PendingState> => {
     const job = await db.query.printJobs.findFirst({
       where: and(
         eq(printJobs.printerId, printerId),
@@ -52,14 +59,14 @@ const fetchHasPendingJob = unstable_cache(
       orderBy: asc(printJobs.createdAt),
       columns: { id: true },
     });
-    return !!job;
+    return { pending: !!job, gen: Date.now() };
   },
-  ['has-pending-job'],
-  { tags: [PRINT_JOBS_TAG], revalidate: 300 },
+  ['pending-state'],
+  { tags: [PRINT_JOBS_TAG], revalidate: HEARTBEAT_SEC },
 );
 
-export function hasPendingJobCached(printerId: string) {
-  return fetchHasPendingJob(printerId);
+export function getPendingState(printerId: string) {
+  return fetchPendingState(printerId);
 }
 
 // `{ expire: 0 }` flips the call from SWR to immediate invalidation:

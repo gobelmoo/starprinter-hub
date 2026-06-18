@@ -4,10 +4,10 @@ import { renderMarkup } from '@/lib/cputil';
 import type { ThermalWidth } from '@/lib/printer-config';
 import {
   getPrinterByMacCached,
-  hasPendingJobCached,
+  getPendingState,
   invalidatePrinterJobs,
 } from '@/lib/cache/printer';
-import { maybeUpdateLastSeen } from '@/lib/cache/last-seen';
+import { recordHeartbeat } from '@/lib/cache/last-seen';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
@@ -23,26 +23,37 @@ async function ackJob(mac: string, code: string | null) {
 
   const success = code?.startsWith('2') ?? false;
 
-  await db
-    .update(printJobs)
-    .set({
-      status: success ? 'done' : 'failed',
-      errorMessage: success ? null : `printer code: ${code ?? 'unknown'}`,
-      printedAt: success ? new Date() : null,
-    })
-    .where(
-      and(
-        eq(printJobs.printerId, printer.id),
-        eq(printJobs.status, 'printing'),
-      ),
-    );
+  if (success) {
+    // delete-on-success: ไม่เก็บประวัติงานสำเร็จ (ลด Neon storage)
+    await db
+      .delete(printJobs)
+      .where(
+        and(
+          eq(printJobs.printerId, printer.id),
+          eq(printJobs.status, 'printing'),
+        ),
+      );
+  } else {
+    await db
+      .update(printJobs)
+      .set({
+        status: 'failed',
+        errorMessage: `printer code: ${code ?? 'unknown'}`,
+      })
+      .where(
+        and(
+          eq(printJobs.printerId, printer.id),
+          eq(printJobs.status, 'printing'),
+        ),
+      );
+  }
 
   invalidatePrinterJobs();
   return new Response(null, { status: 204 });
 }
 
-// POST — printer poll. Hot path: hits Postgres only when (a) cache cold,
-// (b) last_seen_at debounce window elapsed, or (c) a job is actually waiting.
+// POST — printer poll. Hot path: hits Postgres only when (a) cache cold or
+// gen flips (~1×/HEARTBEAT_SEC for last_seen write), or (b) a job is waiting.
 export async function POST(req: Request) {
   let body: Record<string, unknown> = {};
   try {
@@ -59,14 +70,17 @@ export async function POST(req: Request) {
     return Response.json({ jobReady: false });
   }
 
-  // Debounced — at most one UPDATE per 5 min per printer per warm instance.
-  await maybeUpdateLastSeen(
+  // Single heartbeat: pending read (cached, ~1×/HEARTBEAT) + aligned
+  // last_seen write in the same compute wake.
+  const { pending, gen } = await getPendingState(printer.id);
+  await recordHeartbeat(
     printer.id,
     body.statusCode ? decodeURIComponent(String(body.statusCode)) : null,
+    gen,
   );
 
-  // Cached check; usually false → skip Postgres entirely.
-  if (!(await hasPendingJobCached(printer.id))) {
+  // Usually false → skip Postgres entirely, compute stays asleep.
+  if (!pending) {
     return Response.json({ jobReady: false });
   }
 

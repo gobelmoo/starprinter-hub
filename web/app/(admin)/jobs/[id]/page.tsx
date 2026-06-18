@@ -64,14 +64,14 @@ export default async function JobDetailPage({
               </button>
             </form>
           )}
-          {job.status !== 'done' && (
+          {(job.status === 'pending' || job.status === 'printing' || job.status === 'failed') && (
             <form action={markJobDone}>
               <input type="hidden" name="id" value={job.id} />
               <button
                 type="submit"
                 className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
               >
-                Mark done
+                Remove from queue
               </button>
             </form>
           )}
@@ -86,10 +86,6 @@ export default async function JobDetailPage({
         <div>
           <dt className="text-xs uppercase text-gray-500">Branch</dt>
           <dd className="mt-1">{printer?.branchCode ?? '-'}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase text-gray-500">Printed at</dt>
-          <dd className="mt-1">{formatTime(job.printedAt)}</dd>
         </div>
         {job.errorMessage && (
           <div className="col-span-2">

@@ -1,3 +1,5 @@
+import { ONLINE_THRESHOLD_SEC } from '@/lib/constants';
+
 export function formatTime(d: Date | string | null): string {
   if (!d) return '-';
   const date = typeof d === 'string' ? new Date(d) : d;
@@ -22,12 +24,13 @@ export function timeAgo(d: Date | string | null): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-// 12 min threshold: last_seen_at is debounced server-side to once per 10 min
-// (see lib/cache/last-seen.ts) so a tighter window would flicker offline.
+// 35-min threshold: last_seen is refreshed once per heartbeat (~30 min, see
+// lib/cache/last-seen.ts + lib/constants.ts) so a tighter window would
+// flicker offline between heartbeats.
 export function isOnline(lastSeenAt: Date | string | null): boolean {
   if (!lastSeenAt) return false;
   const date =
     typeof lastSeenAt === 'string' ? new Date(lastSeenAt) : lastSeenAt;
   const seconds = (Date.now() - date.getTime()) / 1000;
-  return seconds < 720;
+  return seconds < ONLINE_THRESHOLD_SEC;
 }
