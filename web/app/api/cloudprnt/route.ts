@@ -4,10 +4,10 @@ import { renderMarkup } from '@/lib/cputil';
 import type { ThermalWidth } from '@/lib/printer-config';
 import {
   getPrinterByMacCached,
-  hasPendingJobCached,
+  getPendingState,
   invalidatePrinterJobs,
 } from '@/lib/cache/printer';
-import { maybeUpdateLastSeen } from '@/lib/cache/last-seen';
+import { recordHeartbeat } from '@/lib/cache/last-seen';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
@@ -41,8 +41,8 @@ async function ackJob(mac: string, code: string | null) {
   return new Response(null, { status: 204 });
 }
 
-// POST — printer poll. Hot path: hits Postgres only when (a) cache cold,
-// (b) last_seen_at debounce window elapsed, or (c) a job is actually waiting.
+// POST — printer poll. Hot path: hits Postgres only when (a) cache cold or
+// gen flips (~1×/HEARTBEAT_SEC for last_seen write), or (b) a job is waiting.
 export async function POST(req: Request) {
   let body: Record<string, unknown> = {};
   try {
@@ -59,14 +59,17 @@ export async function POST(req: Request) {
     return Response.json({ jobReady: false });
   }
 
-  // Debounced — at most one UPDATE per 5 min per printer per warm instance.
-  await maybeUpdateLastSeen(
+  // Single heartbeat: pending read (cached, ~1×/HEARTBEAT) + aligned
+  // last_seen write in the same compute wake.
+  const { pending, gen } = await getPendingState(printer.id);
+  await recordHeartbeat(
     printer.id,
     body.statusCode ? decodeURIComponent(String(body.statusCode)) : null,
+    gen,
   );
 
-  // Cached check; usually false → skip Postgres entirely.
-  if (!(await hasPendingJobCached(printer.id))) {
+  // Usually false → skip Postgres entirely, compute stays asleep.
+  if (!pending) {
     return Response.json({ jobReady: false });
   }
 
