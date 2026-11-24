@@ -32,7 +32,10 @@ export const printJobs = pgTable(
     status: text('status').notNull().default('pending'),
     errorMessage: text('error_message'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
-    printedAt: timestamp('printed_at'),
+    // When the printer claimed the job (pending → printing). Reuses the old
+    // printed_at column, which went unused once successful jobs were deleted
+    // instead of kept, so no migration is needed.
+    claimedAt: timestamp('printed_at'),
   },
   (table) => [
     index('print_jobs_printer_status_created_idx').on(

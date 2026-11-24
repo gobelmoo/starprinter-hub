@@ -16,7 +16,7 @@ export async function retryJob(formData: FormData) {
     .set({
       status: 'pending',
       errorMessage: null,
-      printedAt: null,
+      claimedAt: null,
     })
     .where(eq(printJobs.id, id));
 

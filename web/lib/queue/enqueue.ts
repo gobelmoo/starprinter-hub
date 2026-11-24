@@ -1,7 +1,9 @@
 import { db } from '@/lib/db';
 import { printers, printJobs } from '@/lib/db/schema';
 import { invalidatePrinterJobs } from '@/lib/cache/printer';
+import { warmImages } from '@/lib/print-images';
 import { and, eq } from 'drizzle-orm';
+import { after } from 'next/server';
 
 type Result =
   | { ok: true; id: string }
@@ -30,5 +32,8 @@ export async function enqueueMarkupJob(input: {
     .returning({ id: printJobs.id });
 
   invalidatePrinterJobs();
+  // Download remote images after the response is sent, so the printer's
+  // first GET finds them cached instead of waiting on a slow origin.
+  after(() => warmImages(input.markup));
   return { ok: true, id: job.id };
 }

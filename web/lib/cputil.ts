@@ -3,6 +3,11 @@ import { writeFile, readFile, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { ThermalWidth } from './printer-config';
+import {
+  fetchImage,
+  remoteImageUrls,
+  REMOTE_IMAGE_URL_RE,
+} from './print-images';
 
 const PLATFORM = process.platform;
 const ARCH = process.arch;
@@ -56,17 +61,13 @@ export async function renderMarkup(
   }
 }
 
-const REMOTE_IMAGE_URL_RE = /(url\s+)(https?:\/\/[^\s;\]]+)/g;
-
 async function preFetchImages(
   markup: string,
 ): Promise<{ markup: string; tmpFiles: string[] }> {
   const tmpFiles: string[] = [];
-  const urls = [...markup.matchAll(REMOTE_IMAGE_URL_RE)].map((m) => m[2]);
-  if (urls.length === 0) return { markup, tmpFiles };
+  const uniq = remoteImageUrls(markup);
+  if (uniq.length === 0) return { markup, tmpFiles };
 
-  // De-dupe so the same image is fetched once even if referenced multiple times.
-  const uniq = Array.from(new Set(urls));
   const replacements = new Map<string, string>();
 
   await Promise.all(
@@ -75,11 +76,9 @@ async function preFetchImages(
         url.match(/\.(png|jpe?g|bmp|gif)(?:\?|$|#)/i)?.[1]?.toLowerCase() ??
         'bin';
       const localPath = path.join('/tmp', `${randomUUID()}.${ext}`);
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`image fetch ${res.status} for ${url}`);
-      }
-      const buf = Buffer.from(await res.arrayBuffer());
+      // Cached: see lib/print-images.ts for why this must not hit the
+      // origin on every printer GET.
+      const buf = await fetchImage(url);
       await writeFile(localPath, buf);
       tmpFiles.push(localPath);
       replacements.set(url, localPath);
