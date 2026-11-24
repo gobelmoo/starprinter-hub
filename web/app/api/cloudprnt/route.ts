@@ -133,13 +133,16 @@ export async function GET(req: Request) {
     orderBy: asc(printJobs.createdAt),
   });
 
-  // Self-heal: if the existing 'printing' job has been stuck > 10 min, the
+  // Self-heal: if the existing 'printing' job was claimed > 10 min ago, the
   // printer never sent DELETE (network drop, power cycle). Mark it failed
   // and fall through to claim the next pending. Replaces the per-10-min cron
-  // we can't run on Hobby. NOTE: uses createdAt as a proxy for claim time —
-  // long-queued jobs that JUST got claimed will be expired on the next poll;
-  // operator retry recovers them.
-  if (job && Date.now() - job.createdAt.getTime() > STUCK_AFTER_MS) {
+  // we can't run on Hobby. Measured from claim time, NOT createdAt: printers
+  // legitimately re-send GET (slow download, retry), and with createdAt a job
+  // that sat in the queue > 10 min died on its first retry — and so did every
+  // resend queued behind it. Jobs claimed before claimedAt existed fall back
+  // to createdAt.
+  const claimedAt = job?.claimedAt ?? job?.createdAt;
+  if (job && claimedAt && Date.now() - claimedAt.getTime() > STUCK_AFTER_MS) {
     await db
       .update(printJobs)
       .set({
@@ -164,7 +167,7 @@ export async function GET(req: Request) {
     if (pending) {
       const [claimed] = await db
         .update(printJobs)
-        .set({ status: 'printing' })
+        .set({ status: 'printing', claimedAt: new Date() })
         .where(
           and(eq(printJobs.id, pending.id), eq(printJobs.status, 'pending')),
         )
