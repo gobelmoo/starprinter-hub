@@ -18,8 +18,11 @@ async function ackJob(mac: string, code: string | null) {
   const printer = await getPrinterByMacCached(mac);
   if (!printer) return new Response('not found', { status: 404 });
 
-  // Code 520 = network timeout — leave job 'printing', let printer retry GET
-  if (code === '520') return new Response(null, { status: 204 });
+  // Code 520 = download timeout — leave job 'printing', let printer retry GET.
+  // Printers send the code with a description ("520 Download failed"), so
+  // match the 3-digit prefix like Star's reference server does. Retries are
+  // bounded by the 10-min stuck-job self-heal in GET.
+  if (code?.slice(0, 3) === '520') return new Response(null, { status: 204 });
 
   const success = code?.startsWith('2') ?? false;
 
